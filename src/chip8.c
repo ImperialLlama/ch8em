@@ -28,6 +28,7 @@ struct chip8 *create_chip8(void)
 	struct chip8 *result = (struct chip8*) calloc(1, sizeof(struct chip8));
 
 	result->pc = PROG_START;
+	result->draw = true;
 	for (int i = 0; i < 80; ++i)
 		result->mem[i] = chip8_font[i];
 
@@ -171,15 +172,15 @@ static void exec_8_instr(uint16_t opcode, struct chip8 *ch8)
 		ch8->v[x] = ch8->v[x] ^ ch8->v[y];
 		break;
 	case 0x4:
-		ch8->v[x] = ch8->v[x] + ch8->v[y];
 		ch8->v[0xf] = ch8->v[y] > 0xff - ch8->v[x] ? 1 : 0;
+		ch8->v[x] = ch8->v[x] + ch8->v[y];
 		break;
 	case 0x5:
 		ch8->v[0xf] = ch8->v[x] > ch8->v[y] ? 1 : 0;
 		ch8->v[x] = ch8->v[x] - ch8->v[y];
 		break;
 	case 0x6:
-		ch8->v[0xf] = ch8->v[x] & 0x1;
+		ch8->v[0xf] = ch8->v[x] & 0b1;
 		ch8->v[x] = ch8->v[x] >> 1;
 		break;
 	case 0x7:
@@ -190,6 +191,9 @@ static void exec_8_instr(uint16_t opcode, struct chip8 *ch8)
 		ch8->v[0xf] = ch8->v[x] >> 7;
 		ch8->v[x] = ch8->v[x] << 1;
 		break;
+	default:
+		fprintf(stderr, "Unknown instruction: %04x\n", opcode);
+		exit(EXIT_FAILURE);
 	}
 	ch8->pc += 2;
 }
@@ -246,11 +250,10 @@ static void exec_skp_instr(uint16_t opcode, struct chip8 *ch8)
 		ch8->pc += ch8->keypad[x] == 0 ? 4 : 2;
 }
 
-static void exec_f_instr(uint16_t opcode, struct chip8 *ch8)
+static bool exec_f_instr(uint16_t opcode, struct chip8 *ch8)
 {
 	uint16_t x = (opcode & 0x0f00) >> 8;
 	bool press = false;
-
 	switch (opcode & 0x00ff) {
 	case 0x07:
 		ch8->v[x] = ch8->delay_timer;
@@ -263,7 +266,7 @@ static void exec_f_instr(uint16_t opcode, struct chip8 *ch8)
 			}
 		}
 		if (!press)
-			return;
+			return false;
 		break;
 	case 0x15:
 		ch8->delay_timer = ch8->v[x];
@@ -279,8 +282,8 @@ static void exec_f_instr(uint16_t opcode, struct chip8 *ch8)
 		break;
 	case 0x33:
 		ch8->mem[ch8->i] = ch8->v[x] / 100;
-		ch8->mem[ch8->i] = (ch8->v[x] / 10) % 10;
-		ch8->mem[ch8->i] = ch8->v[x] % 10;
+		ch8->mem[ch8->i + 1] = (ch8->v[x] / 10) % 10;
+		ch8->mem[ch8->i + 2] = ch8->v[x] % 10;
 		break;
 	case 0x55:
 		for (int i = 0; i <= x; ++i)
@@ -295,12 +298,13 @@ static void exec_f_instr(uint16_t opcode, struct chip8 *ch8)
 		exit(EXIT_FAILURE);
 	}
 	ch8->pc += 2;
+	return true;
 }
 
 void step_emulate(struct chip8 *ch8)
 {
 	uint16_t opcode = ch8->mem[ch8->pc] << 8 | ch8->mem[ch8->pc + 1];
-	printf("Executing instruction %04x\n", opcode);
+//	printf("Executing instruction %04x\n", opcode);
 
 	switch (opcode & 0xf000) {
 	case 0x0000:
@@ -349,7 +353,8 @@ void step_emulate(struct chip8 *ch8)
 		exec_skp_instr(opcode, ch8);
 		break;
 	case 0xf000:
-		exec_f_instr(opcode, ch8);
+		if (!exec_f_instr(opcode, ch8))
+			return;
 		break;
 	}
 	if (ch8->delay_timer > 0)

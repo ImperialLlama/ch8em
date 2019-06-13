@@ -33,7 +33,6 @@ int main(int argc, char **argv)
 	}
 	struct chip8 *ch8 = create_chip8();
 
-
 	SDL_Window *window = NULL;
 
 	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -45,7 +44,7 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
 		exit(EXIT_FAILURE);
 	}
-	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, 0);
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 	SDL_RenderSetLogicalSize(renderer, WINDOW_WIDTH, WINDOW_HEIGHT);
 
 	SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
@@ -53,17 +52,18 @@ int main(int argc, char **argv)
 
 	load_program(argv[1], ch8);
 
-	while (true) {
+	bool quit = false;
+	while (!quit) {
 		step_emulate(ch8);
 
 		SDL_Event e;
 		while (SDL_PollEvent(&e)) {
 			if (e.type == SDL_QUIT)
-				exit(EXIT_SUCCESS);
+				quit = true;
 
 			if (e.type == SDL_KEYDOWN) {
 				if (e.key.keysym.sym == SDLK_ESCAPE)
-					exit(EXIT_SUCCESS);
+					quit = true;
 
 				for (int i = 0; i < 16; ++i)
 					if (e.key.keysym.sym == keymap[i])
@@ -84,6 +84,7 @@ int main(int argc, char **argv)
 			SDL_RenderClear(renderer);
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
+			ch8->draw = false;
 		}
 	}
 
