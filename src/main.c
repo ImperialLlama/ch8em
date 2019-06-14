@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <SDL2/SDL.h>
+
 #include "macros.h"
 #include "output.h"
 #include "chip8.h"
-
 
 int main(int argc, char **argv)
 {
@@ -13,13 +13,13 @@ int main(int argc, char **argv)
 		exit(EXIT_FAILURE);
 	}
 	// Copy the ROM filepath into a string.
-	char* filepath = argv[1];
+	char *filepath = argv[1];
 
 	// Alocate a chip8 state in heap.
-	struct chip8* ch8 = create_chip8(filepath);
+	struct chip8 *ch8 = create_chip8(filepath);
 
 	struct screen screen;
-	screen_init(&screen);
+	screen_init(&screen, argv[1]);
 
 	uint32_t initial_tick;
 	uint32_t frame_speed;
@@ -43,12 +43,12 @@ int main(int argc, char **argv)
 
 	    // Analyze input.
 	    while(SDL_PollEvent(&e))
-	        if(e.type == SDL_QUIT)
+	        if(e.type == SDL_QUIT || e.key.keysym.sym == SDLK_ESCAPE)
 	            quit = true;
 	}
 
 	screen_clear(&screen);
-	chip8_destroy(ch8);
+	destroy_chip8(ch8);
 
 	return 0;
 }

@@ -1,17 +1,18 @@
-#ifndef CH8EM_OUTPUT_H
-#define CH8EM_OUTPUT_H
+#ifndef _CH8EM_OUTPUT_H
+#define _CH8EM_OUTPUT_H
 
-#include <SDL_system.h>
 #include "macros.h"
 
 struct screen {
-    SDL_Renderer* renderer;
-    SDL_Window* window;
-    SDL_Texture* texture;
+	SDL_Window *window;
+	SDL_Renderer *renderer;
+	SDL_Texture *texture;
 };
 
-int screen_init(struct screen* screen);
-void screen_clear(struct screen* screen);
-void screen_draw(struct screen* screen, uint32_t vbuffer[WINDOW_WIDTH * WINDOW_HEIGHT]);
+void screen_init(struct screen *screen, char *filename);
 
-#endif //CH8EM_OUTPUT_H
+void screen_clear(struct screen *screen);
+
+void screen_draw(struct screen *screen, uint32_t vbuffer[WINDOW_WIDTH * WINDOW_HEIGHT]);
+
+#endif //_CH8EM_OUTPUT_H
