@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <SDL2/SDL.h>
-#include "chip8.h"
 #include "macros.h"
 #include "output.h"
+#include "chip8.h"
 
 
 int main(int argc, char **argv)
@@ -17,7 +17,7 @@ int main(int argc, char **argv)
 
 	// Declare a chip8 structure to prepare for initialization.
 	struct chip8 ch8;
-	create_chip8(&ch8, filepath);
+    create_chip8(&ch8, filepath);
 
 	struct screen screen;
 	screen_init(&screen);
@@ -31,11 +31,11 @@ int main(int argc, char **argv)
 	    initial_tick = SDL_GetTicks();
 
 	    // Performs an emulator cycle: fetch, execute, update flags.
-	    step_emulate(&ch8);
+        step_emulate(&ch8);
 
 	    if(ch8.draw) {
 	        screen_draw(&screen, ch8.vbuffer);
-	        ch8.draw = false;
+            ch8.draw = false;
 	    }
 
 	    frame_speed = SDL_GetTicks() - initial_tick;

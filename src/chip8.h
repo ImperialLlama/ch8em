@@ -1,35 +1,31 @@
-#ifndef _CHIP8_H_
-#define _CHIP8_H_
-
-#include <stdint.h>
+#pragma once
 #include <stdbool.h>
-#include "macros.h"
+#include <stdint.h>
 
+#include "macros.h"
+#include "opcode.h"
 
 struct chip8 {
-	uint8_t mem[MEMORY_SIZE];
-	uint8_t v[16];
+  union opcode opcode;
+  uint8_t mem[MEMORY_SIZE];
+  uint8_t v[16];
+  uint16_t i;
+  uint16_t pc;
 
-	uint8_t i;
+  uint32_t vbuffer[WINDOW_WIDTH * WINDOW_HEIGHT];
+  bool keypad[16];
 
-	uint8_t delay_timer;
-	uint8_t sound_timer;
+  bool draw;
 
-	uint16_t pc;
-	uint8_t sp;
-	uint16_t stack[16];
+  uint16_t stack[16];
+  uint16_t sp;
 
-	uint8_t keypad[16];
-	uint32_t vbuffer[WINDOW_WIDTH * WINDOW_HEIGHT];
-	bool draw;
+  uint8_t sound_timer;
+  uint8_t delay_timer;
 };
 
-void create_chip8(struct chip8* ch8, char *filepath);
-
-void destroy_chip8(struct chip8 *chip8);
-
-void load_program(const char *filepath, struct chip8 *ch8);
-
+int create_chip8(struct chip8 *ch8, char *filename);
+void chip8_get_instr(struct chip8 *ch8);
+void chip8_exe_instr(struct chip8 *ch8);
+void chip8_update_time(struct chip8 *ch8);
 void step_emulate(struct chip8 *ch8);
-
-#endif //_CHIP8_H_
