@@ -3,38 +3,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
+#include "macros.h"
 
-const uint8_t chip8_font[] = {
-		0xF0, 0x90, 0x90, 0x90, 0xF0,  // 0
-		0x20, 0x60, 0x20, 0x20, 0x70,  // 1
-		0xF0, 0x10, 0xF0, 0x80, 0xF0,  // 2
-		0xF0, 0x10, 0xF0, 0x10, 0xF0,  // 3
-		0x90, 0x90, 0xF0, 0x10, 0x10,  // 4
-		0xF0, 0x80, 0xF0, 0x10, 0xF0,  // 5
-		0xF0, 0x80, 0xF0, 0x90, 0xF0,  // 6
-		0xF0, 0x10, 0x20, 0x40, 0x40,  // 7
-		0xF0, 0x90, 0xF0, 0x90, 0xF0,  // 8
-		0xF0, 0x90, 0xF0, 0x10, 0xF0,  // 9
-		0xF0, 0x90, 0xF0, 0x90, 0x90,  // A
-		0xE0, 0x90, 0xE0, 0x90, 0xE0,  // B
-		0xF0, 0x80, 0x80, 0x80, 0xF0,  // C
-		0xE0, 0x90, 0x90, 0x90, 0xE0,  // D
-		0xF0, 0x80, 0xF0, 0x80, 0xF0,  // E
-		0xF0, 0x80, 0xF0, 0x80, 0x80   // F
-};
-
-struct chip8 *create_chip8(void)
+void create_chip8(struct chip8* ch8, char *filepath)
 {
-	struct chip8 *result = (struct chip8*) calloc(1, sizeof(struct chip8));
+    FILE *fp = fopen(filepath, "rb");
+	if(!fp) {
+	    fprintf(stderr, "Invalid or corrupted filepath!\n");
+	    exit(EXIT_FAILURE);
+	}
 
-	result->pc = PROG_START;
-	result->draw = true;
-	for (int i = 0; i < 80; ++i)
-		result->mem[i] = chip8_font[i];
+	fread(&ch8->mem[PROG_START], 1, MEMORY_SIZE - PROG_START, fp);
+	fclose(fp);
 
+	// Set the font encodings at the beginning of chip-8 RAM.
+	memcpy(ch8->mem, chip8_font, sizeof(chip8_font));
+
+	// Initialize output screen to black.
+	memset(ch8->vbuffer, BLACK_COLOR, sizeof(ch8->vbuffer));
+	// Empty stack.
+	memset(ch8->stack, 0, sizeof(ch8->stack));
+	// Empty registers.
+	memset(ch8->v, 0, sizeof(ch8->v));
+	// Initialize all buttons to 'not pressed'.
+	memset(ch8->keypad, 0, sizeof(ch8->keypad));
+
+	ch8->pc = PROG_START;
+	ch8->i = 0;
+	ch8->sp = 0;
+	ch8->draw = 0;
+	ch8->sound_timer = 0;
+	ch8->delay_timer = 0;
+
+	// Initialize random generator seed to system time for unpredictability.
 	srand(time(NULL));
-
-	return result;
 }
 
 void destroy_chip8(struct chip8 *chip8)
@@ -50,47 +52,46 @@ static long get_file_size(FILE *fp)
 	return res;
 }
 
-void load_program(const char *filepath, struct chip8 *ch8)
-{
-	FILE *fp = fopen(filepath, "rb");
-	if (fp == NULL) {
-		fprintf(stderr, "Failed to open file %s\n", filepath);
-		exit(EXIT_FAILURE);
-	}
-
-	long size = get_file_size(fp);
-	if (size > MAX_ROM_SIZE) {
-		fprintf(stderr, "File too large to be read into memory\n");
-		exit(EXIT_FAILURE);
-	}
-
-	uint8_t *rom = (uint8_t*) malloc(size * sizeof(uint8_t));
-	if (rom == NULL) {
-		fprintf(stderr, "malloc failed\n");
-		exit(EXIT_FAILURE);
-	}
-
-	size_t read = fread(rom, sizeof(uint8_t), size, fp);
-	if (read != size) {
-		fprintf(stderr, "Failed to read ROM\n");
-		exit(EXIT_FAILURE);
-	}
-
-	for (int i = 0; i < size; ++i)
-		ch8->mem[i + PROG_START] = rom[i];
-
-	free(rom);
-	fclose(fp);
-}
+//void load_program(const char *filepath, struct chip8 *ch8)
+//{
+//	FILE *fp = fopen(filepath, "rb");
+//	if (fp == NULL) {
+//		fprintf(stderr, "Failed to open file %s\n", filepath);
+//		exit(EXIT_FAILURE);
+//	}
+//
+//	long size = ftell(fp);
+//	if (size > MAX_ROM_SIZE) {
+//		fprintf(stderr, "File too large to be read into memory\n");
+//		exit(EXIT_FAILURE);
+//	}
+//
+//	uint8_t *rom = (uint8_t*) malloc(size * sizeof(uint8_t));
+//	if (rom == NULL) {
+//		fprintf(stderr, "malloc failed\n");
+//		exit(EXIT_FAILURE);
+//	}
+//
+//	size_t read = fread(rom, sizeof(uint8_t), size, fp);
+//	if (read != size) {
+//		fprintf(stderr, "Failed to read ROM\n");
+//		exit(EXIT_FAILURE);
+//	}
+//
+//	for (int i = 0; i < size; ++i)
+//		ch8->mem[i + PROG_START] = rom[i];
+//
+//	free(rom);
+//	fclose(fp);
+//
+//}
 
 static void exec_0_instr(uint16_t opcode, struct chip8 *ch8)
 {
 	switch (opcode) {
 	// CLS - clear screen
 	case 0x00e0:
-		for (int i = 0; i < DISPLAY_SIZE; ++i)
-			ch8->vbuffer[i] = 0;
-		ch8->draw = true;
+		memset(ch8->vbuffer, BLACK_COLOR, sizeof(ch8->vbuffer));
 		break;
 	// RET - return from subroutine
 	case 0x00ee:
@@ -221,23 +222,47 @@ static void exec_rnd_instr(uint16_t opcode, struct chip8 *ch8)
 
 static void exec_drw_instr(uint16_t opcode, struct chip8 *ch8)
 {
-	uint16_t vx = (opcode & 0x0f00) >> 8;
-	uint16_t vy = (opcode & 0x00f0) >> 4;
-	uint16_t n = opcode & 0x000f;
-	ch8->v[0xf] = 0;
-	for (int y = 0; y < n; ++y) {
-		uint8_t pixel = ch8->mem[ch8->i + y];
-		for (int x = 0; x < 8; ++x) {
-			if ((pixel & (0x80 >> x)) != 0) {
-				int coord = ch8->v[vx] + x + (ch8->v[vy] + y) * 64;
-				if (ch8->vbuffer[coord] == 1)
-					ch8->v[0xf] = 1;
-				ch8->vbuffer[coord] ^= 1;
-			}
-		}
-	}
-	ch8->draw = true;
-	ch8->pc += 2;
+    uint16_t vx = (opcode & 0x0f00) >> 8;
+    uint16_t vy = (opcode & 0x00f0) >> 4;
+    uint16_t n = opcode & 0x000f;
+    ch8->v[0xf] = 0;
+    for(int y = 0; y < n; y++) {
+        for(int x = 0; x < 8; x++) {
+            uint8_t pixel = ch8->mem[ch8->i + y];
+            // Check if any pixels are overlapped.
+            if(pixel & (0x80 >> x) != 0) {
+                int coord = (ch8->v[vx] + x) % WINDOW_WIDTH + ((ch8->v[vy] + y) % WINDOW_HEIGHT) * WINDOW_WIDTH;
+                // We only set the carry flag if there already was a set pixel in a position where we intend to draw.
+                if(ch8->vbuffer[coord] == WHITE_COLOR) {
+                    ch8->v[0xf] = 1;
+                    ch8->vbuffer[coord] = BLACK_COLOR;
+                } else
+                    ch8->vbuffer[coord] = WHITE_COLOR;
+            }
+        }
+    }
+
+
+
+
+
+//	uint16_t vx = (opcode & 0x0f00) >> 8;
+//	uint16_t vy = (opcode & 0x00f0) >> 4;
+//	uint16_t n = opcode & 0x000f;
+//	ch8->v[0xf] = 0;
+//	for (int y = 0; y < n; ++y) {
+//		uint8_t pixel = ch8->mem[ch8->i + y];
+//		for (int x = 0; x < 8; ++x) {
+//			if ((pixel & (0x80 >> x)) != 0) {
+//				int coord = ch8->v[vx] + x + (ch8->v[vy] + y) * 64;
+//				if (ch8->vbuffer[coord] == 1)
+//					ch8->v[0xf] = 1;
+//				ch8->vbuffer[coord] ^= 1;
+//			}
+//		}
+//	}
+//	ch8->draw = true;
+//	ch8->pc += 2;
 }
 
 static void exec_skp_instr(uint16_t opcode, struct chip8 *ch8)
@@ -260,7 +285,7 @@ static bool exec_f_instr(uint16_t opcode, struct chip8 *ch8)
 		break;
 	case 0x0a:
 		for (int i = 0; i < 0xf; ++i) {
-			if (ch8->keypad[i] != 0) {
+			if (SDL_GetKeyboardState(NULL)[keymap[i]]) {
 				ch8->v[x] = i;
 				press = true;
 			}
@@ -304,7 +329,7 @@ static bool exec_f_instr(uint16_t opcode, struct chip8 *ch8)
 void step_emulate(struct chip8 *ch8)
 {
 	uint16_t opcode = ch8->mem[ch8->pc] << 8 | ch8->mem[ch8->pc + 1];
-//	printf("Executing instruction %04x\n", opcode);
+	printf("Executing instruction %04x\n", opcode);
 
 	switch (opcode & 0xf000) {
 	case 0x0000:

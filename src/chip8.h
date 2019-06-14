@@ -3,15 +3,11 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include "macros.h"
 
-#define PROG_START 0x200
-#define PROG_START_ETI660 0x600
-
-#define MAX_ROM_SIZE 0xe00
-#define DISPLAY_SIZE 2048
 
 struct chip8 {
-	uint8_t mem[0x1000];
+	uint8_t mem[MEMORY_SIZE];
 	uint8_t v[16];
 
 	uint8_t i;
@@ -24,11 +20,11 @@ struct chip8 {
 	uint16_t stack[16];
 
 	uint8_t keypad[16];
-	uint8_t vbuffer[64 * 32];
+	uint32_t vbuffer[WINDOW_WIDTH * WINDOW_HEIGHT];
 	bool draw;
 };
 
-struct chip8 *create_chip8(void);
+void create_chip8(struct chip8* ch8, char *filepath);
 
 void destroy_chip8(struct chip8 *chip8);
 
