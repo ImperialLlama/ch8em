@@ -16,6 +16,8 @@
 #define FPS 60
 #define MILLIS_PER_CYCLE 100 / FPS
 
+#define VF 0xf
+
 #define PROG_START 0x200
 #define PROG_START_ETI660 0x600
 

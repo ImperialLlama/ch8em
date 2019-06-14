@@ -24,7 +24,8 @@ struct chip8 {
   uint8_t delay_timer;
 };
 
-int create_chip8(struct chip8 *ch8, char *filename);
+struct chip8* create_chip8(char *filename);
+void chip8_destroy(struct chip8* ch8);
 void chip8_get_instr(struct chip8 *ch8);
 void chip8_exe_instr(struct chip8 *ch8);
 void chip8_update_time(struct chip8 *ch8);

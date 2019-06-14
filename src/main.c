@@ -15,9 +15,8 @@ int main(int argc, char **argv)
 	// Copy the ROM filepath into a string.
 	char* filepath = argv[1];
 
-	// Declare a chip8 structure to prepare for initialization.
-	struct chip8 ch8;
-    create_chip8(&ch8, filepath);
+	// Alocate a chip8 state in heap.
+	struct chip8* ch8 = create_chip8(filepath);
 
 	struct screen screen;
 	screen_init(&screen);
@@ -31,11 +30,11 @@ int main(int argc, char **argv)
 	    initial_tick = SDL_GetTicks();
 
 	    // Performs an emulator cycle: fetch, execute, update flags.
-        step_emulate(&ch8);
+        step_emulate(ch8);
 
-	    if(ch8.draw) {
-	        screen_draw(&screen, ch8.vbuffer);
-            ch8.draw = false;
+	    if(ch8->draw) {
+	        screen_draw(&screen, ch8->vbuffer);
+            ch8->draw = false;
 	    }
 
 	    frame_speed = SDL_GetTicks() - initial_tick;
@@ -49,6 +48,7 @@ int main(int argc, char **argv)
 	}
 
 	screen_clear(&screen);
+	chip8_destroy(ch8);
 
 	return 0;
 }
