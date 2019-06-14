@@ -11,5 +11,12 @@ include_directories(${SDL2_INCLUDE_DIRS})
 add_executable(ch8em
         src/main.c
         src/chip8.c
-        src/chip8.h)
+        src/chip8.h
+        src/chip8_instruction.c
+        src/chip8_instruction.h
+        src/macros.h
+        src/output.c
+        src/output.h
+        src/opcode.h
+        )
 target_link_libraries(ch8em ${SDL2_LIBRARIES})
