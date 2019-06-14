@@ -1,10 +1,29 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <SDL2/SDL.h>
-#include "macros.h"
-#include "output.h"
 #include "chip8.h"
 
+#define WINDOW_WIDTH 1024
+#define WINDOW_HEIGHT 512
+
+uint8_t keymap[16] = {
+		SDLK_x,
+		SDLK_1,
+		SDLK_2,
+		SDLK_3,
+		SDLK_q,
+		SDLK_w,
+		SDLK_e,
+		SDLK_a,
+		SDLK_s,
+		SDLK_d,
+		SDLK_z,
+		SDLK_c,
+		SDLK_4,
+		SDLK_r,
+		SDLK_f,
+		SDLK_v,
+};
 
 int main(int argc, char **argv)
 {
@@ -12,22 +31,32 @@ int main(int argc, char **argv)
 		fprintf(stderr, "Usage: %s <ROM file>\n", argv[0]);
 		exit(EXIT_FAILURE);
 	}
-	// Copy the ROM filepath into a string.
-	char* filepath = argv[1];
+	struct chip8 *ch8 = create_chip8();
 
 	// Alocate a chip8 state in heap.
 	struct chip8* ch8 = create_chip8(filepath);
 
-	struct screen screen;
-	screen_init(&screen);
 
-	uint32_t initial_tick;
-	uint32_t frame_speed;
+	if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+		fprintf(stderr, "Could not init SDL: %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+	window = SDL_CreateWindow("CHIP-8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WINDOW_WIDTH, WINDOW_HEIGHT, SDL_WINDOW_SHOWN);
+	if (window == NULL) {
+		fprintf(stderr, "Could not create window: %s\n", SDL_GetError());
+		exit(EXIT_FAILURE);
+	}
+	SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+	SDL_RenderSetLogicalSize(renderer, WINDOW_WIDTH, WINDOW_HEIGHT);
 
-    SDL_Event e;
+	SDL_Texture *texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ABGR8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
+	uint32_t pixels[2048];
+
+	load_program(argv[1], ch8);
+
 	bool quit = false;
 	while (!quit) {
-	    initial_tick = SDL_GetTicks();
+		step_emulate(ch8);
 
 	    // Performs an emulator cycle: fetch, execute, update flags.
         step_emulate(ch8);
@@ -37,14 +66,27 @@ int main(int argc, char **argv)
             ch8->draw = false;
 	    }
 
-	    frame_speed = SDL_GetTicks() - initial_tick;
-	    if(frame_speed < MILLIS_PER_CYCLE)
-	        SDL_Delay(MILLIS_PER_CYCLE - frame_speed);
+				for (int i = 0; i < 16; ++i)
+					if (e.key.keysym.sym == keymap[i])
+						ch8->keypad[i] = 1;
+			}
 
-	    // Analyze input.
-	    while(SDL_PollEvent(&e))
-	        if(e.type == SDL_QUIT)
-	            quit = true;
+			if (e.type == SDL_KEYUP)
+				for (int i = 0; i < 16; ++i)
+					if (e.key.keysym.sym == keymap[i])
+						ch8->keypad[i] = 0;
+		}
+		if (ch8->draw) {
+			for (int i = 0; i < 2048; ++i) {
+				uint8_t pixel = ch8->vbuffer[i];
+				pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
+			}
+			SDL_UpdateTexture(texture, NULL, pixels, 64 * sizeof(uint32_t));
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
+			SDL_RenderPresent(renderer);
+			ch8->draw = false;
+		}
 	}
 
 	screen_clear(&screen);
