@@ -1,6 +1,5 @@
-#pragma once
-#ifndef CH8EM_MACROS_H
-#define CH8EM_MACROS_H
+#ifndef _CH8EM_MACROS_H
+#define _CH8EM_MACROS_H
 
 #include <stdint.h>
 #include <SDL2/SDL.h>
@@ -24,6 +23,7 @@
 #define MAX_ROM_SIZE 0xe00
 #define DISPLAY_SIZE 2048
 
+#define BASE_WINDOW_TITLE "CHIP-8 Emulator"
 
 static const uint8_t chip8_font[80] = {
         0xF0, 0x90, 0x90, 0x90, 0xF0,  // 0
@@ -45,22 +45,22 @@ static const uint8_t chip8_font[80] = {
 };
 
 static const SDL_Scancode keymap[16] = {
-        SDL_SCANCODE_1,
+		SDL_SCANCODE_X,
+		SDL_SCANCODE_1,
         SDL_SCANCODE_2,
-        SDL_SCANCODE_3,
-        SDL_SCANCODE_4,
-        SDL_SCANCODE_Q,
-        SDL_SCANCODE_W,
-        SDL_SCANCODE_E,
-        SDL_SCANCODE_R,
-        SDL_SCANCODE_A,
-        SDL_SCANCODE_S,
-        SDL_SCANCODE_D,
-        SDL_SCANCODE_F,
-        SDL_SCANCODE_Z,
-        SDL_SCANCODE_X,
-        SDL_SCANCODE_C,
+		SDL_SCANCODE_3,
+		SDL_SCANCODE_Q,
+		SDL_SCANCODE_W,
+		SDL_SCANCODE_E,
+		SDL_SCANCODE_A,
+		SDL_SCANCODE_S,
+		SDL_SCANCODE_D,
+		SDL_SCANCODE_Z,
+		SDL_SCANCODE_C,
+		SDL_SCANCODE_4,
+		SDL_SCANCODE_R,
+		SDL_SCANCODE_F,
         SDL_SCANCODE_V
 };
 
-#endif //CH8EM_MACROS_H
+#endif //_CH8EM_MACROS_H
